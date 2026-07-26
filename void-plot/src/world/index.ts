@@ -1,2 +1,58 @@
-/** World-layer exports will be added here as the world foundation is implemented. */
-export {};
+export type { OccupancyState, RevealState, Tile } from "./tile";
+export {
+  EXPEDITION_SECTOR_SIZES,
+  calculateExpeditionSectorCoordinates,
+  getExpeditionSectorBounds,
+  getHiddenCoordinatesInValidSector,
+  sectorContainsHiddenTile,
+  validateExpeditionSectorFoundation,
+  validateExpeditionSectorSelection,
+} from "./expeditionSector";
+export type {
+  ExpeditionSectorBounds,
+  ExpeditionSectorCoordinateResult,
+  ExpeditionSectorOrigin,
+  ExpeditionSectorSelectionResult,
+  ExpeditionSectorSize,
+  ExpeditionSectorValidationResult,
+} from "./expeditionSector";
+export {
+  INITIAL_REVEALED_MAX_X,
+  INITIAL_REVEALED_MAX_Y,
+  INITIAL_REVEALED_MIN_X,
+  INITIAL_REVEALED_MIN_Y,
+  INITIAL_REVEALED_SIZE,
+  WORLD_HEIGHT,
+  WORLD_TILE_COUNT,
+  WORLD_WIDTH,
+  canOccupyTile,
+  countOccupiedTiles,
+  countRevealedTiles,
+  createWorld,
+  getHiddenOrthogonalNeighbours,
+  getOrthogonalNeighbours,
+  getTile,
+  isInBounds,
+  occupyTile,
+  occupyTiles,
+  revealTile,
+  revealTiles,
+  toTileIndex,
+  vacateTile,
+  vacateTiles,
+  validateOccupancyFoundation,
+  validateRevealFoundation,
+  validateWorld,
+} from "./world";
+export type {
+  OccupancyCheckResult,
+  OccupyTileResult,
+  OccupyTilesResult,
+  RevealTileResult,
+  RevealTilesResult,
+  TileCoordinate,
+  VacateTileResult,
+  VacateTilesResult,
+  WorldState,
+  WorldValidationResult,
+} from "./world";

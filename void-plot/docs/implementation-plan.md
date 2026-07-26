@@ -34,12 +34,41 @@
 
 ## Phase 4 — Expeditions
 
-- Frontier detection
-- Expedition choices
-- Cost, duration, risk, and reward
-- 2×2, 4×4, and 6×6 reveals
-- Research-driven expedition parameters
-- Sector reveal validation
+Implement the first-playable expedition path in this order:
+
+1. **Phaser-independent expedition domain state and validation**
+   - Statuses: planned, active, completed, failed, and cancelled
+   - Immutable planning and start-time sector snapshots
+   - Existing sector API reuse
+   - Duplicate planned/active target rejection
+   - One-active-expedition limit
+   - Deterministic or injected ID generation
+2. **Minimal materials resource state**
+   - Materials-only first-playable expedition costs: 20 / 60 / 140
+   - No deduction before transition to active
+3. **Minimal worker availability state**
+   - Worker requirements: 1 / 2 / 3
+   - Assignment on activation
+   - Release when an active expedition completes, fails, or is cancelled
+4. **Start Expedition button integration**
+   - Sector selection alone creates no expedition
+   - Explicit request creates a planned record and attempts start validation
+   - Failed start validation leaves the record planned without committing resources or workers
+5. **Active expedition timing**
+   - Base durations stored in seconds: 30 / 90 / 180
+   - Timing begins only when active
+6. **Successful completion and sector reveal**
+   - Temporary guaranteed-success rule
+   - Reveal only on successful completion
+   - Reveal start-time hidden coordinates safely
+   - Territory reveal is the initial reward; no additional loot
+7. **Failure/risk support**
+   - Failed status reveals no tiles
+   - Replace temporary guaranteed success when safety/risk rules are implemented
+   - Special-site outcomes remain deferred
+8. **Persistence later**
+   - Persist expedition state only after lifecycle behavior is stable
+   - Preserve immutable snapshots and timing data in seconds
 
 ## Phase 5 — State-weighted events
 

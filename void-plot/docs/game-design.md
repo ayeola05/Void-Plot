@@ -1,6 +1,6 @@
-# Void-Plot: The Last Acre - v3 LOCKED Concept Brief
+# Void-Plot: The Last Acre - v3.2 LOCKED Concept Brief
 
-# Void-Plot: The Last Acre — v3.1 Locked Concept Brief
+# Void-Plot: The Last Acre — v3.2 Locked Concept Brief
 
 **Status: LOCKED**
 
@@ -12,6 +12,7 @@ approved through a formal change request.
 
 **Amendment Log:**
 
+- **v3.2 (2026-07-23):** First-playable expedition lifecycle, reveal timing, workers, durations, costs, concurrency, cancellation, outcomes, and planning/start semantics locked by formal design-authority update. Corrected the accidental `4×2` cadence reference to `4×4`.
 - **v3.1 (2026-07-21):** Framing language updated in the Endless Mode section per steward direction. Fun Gate elevated from pre-ship validation gate to **release gate** (cannot ship without it). Mechanics unchanged.
 
 This document is the final design authority for _Void-Plot: The Last Acre_. All open questions from v2 are resolved with explicit designer calls. No further design iteration is permitted without a formal change request. Development is to proceed immediately based on these specifications.
@@ -141,6 +142,72 @@ Homes, Farms, Power Plants, Defenses, Water Extractors, Forests, Labs
 
 **Risk addressed:** the 240-batch arithmetic of literal 2×2 tile reveals. Sectors preserve cadence.
 
+### **LOCKED: First-Playable Expedition Rules**
+
+These rules are authoritative for the first playable version. The mechanics remain locked unless changed through a formal design-authority update. Numeric balance values marked as tunable may be adjusted after testing, but must not be changed silently during implementation.
+
+#### Sector sizes and lifecycle
+
+- Supported expedition sectors are exactly **2×2**, **4×4**, and **6×6**.
+- Expedition lifecycle statuses are exactly:
+  - **planned** — an expedition record exists, but no cost has been spent, no worker has been assigned, and no timer has started.
+  - **active** — start validation succeeded; cost has been spent, workers are assigned, and duration tracking has begun.
+  - **completed** — the expedition completed successfully and its reveal outcome has been applied.
+  - **failed** — the expedition ended unsuccessfully and revealed no tiles.
+  - **cancelled** — the player cancelled a planned or active expedition; it revealed no tiles.
+
+#### First-playable requirements and balance values
+
+| Sector size | Required workers | Base duration | Base cost |
+| ----------- | ---------------- | ------------- | --------- |
+| 2×2         | 1                | 30 seconds    | 20 materials |
+| 4×4         | 2                | 90 seconds    | 60 materials |
+| 6×6         | 3                | 180 seconds   | 140 materials |
+
+- Expedition durations are stored as **seconds** in design and implementation data.
+- **Materials** are the temporary single expedition-cost resource for the first playable version.
+- The numeric worker, duration, and material-cost values are first-playable balance values and are subject to tuning through an explicit balance update.
+- A later formal design update may split expedition costs into more specific resources. Until then, implementation must use materials only.
+
+#### Planning, start, concurrency, and duplicate targeting
+
+- Selecting a valid sector creates no expedition automatically.
+- The player explicitly requests an expedition from the expedition-planning panel.
+- On that explicit request, the selected valid sector becomes a **planned** expedition record.
+- Start validation then checks current sector validity, available materials, available workers, the active-expedition limit, and duplicate targeting.
+- If start validation succeeds, the expedition becomes **active**. Only this transition deducts materials, assigns workers, and begins duration tracking.
+- If start validation fails, the expedition remains planned and no materials or workers are committed.
+- The first playable version permits a maximum of **one active expedition**.
+- Planned expeditions do not count toward the active-expedition limit until started.
+- A new planned or active expedition may not target the exact same inclusive sector bounds as another planned or active expedition.
+
+#### Sector snapshots and start revalidation
+
+- A planned expedition stores an immutable planning snapshot containing:
+  - sector size;
+  - origin;
+  - inclusive bounds;
+  - all covered coordinates;
+  - hidden coordinates at planning time.
+- Sector size, origin, bounds, and covered coordinates remain immutable for the expedition's lifetime.
+- When a planned expedition attempts to become active, the sector is revalidated against the current world through the expedition-sector rules.
+- Start validation captures a second immutable list of hidden coordinates at start time. Completion uses this start-time list, subject to safe checks against the current world when applying the reveal.
+- Start revalidation must reject a sector that is out of bounds, fully revealed, no longer adjacent as required, or conflicts with another planned or active expedition.
+
+#### Reveal, success, failure, cancellation, and rewards
+
+- Tiles are revealed only when an expedition completes successfully.
+- Starting, failing, or cancelling an expedition reveals no tiles.
+- Successful completion reveals all tiles from the start-time hidden-coordinate snapshot that remain hidden inside the selected sector.
+- The domain model must support both **completed** and **failed** outcomes.
+- Until the safety/risk system is implemented, active expeditions use **guaranteed success**. This is a temporary implementation rule, not the final risk design.
+- A failed expedition reveals no tiles.
+- Planned expeditions may be cancelled freely.
+- Workers assigned to an active expedition are released when that expedition completes, fails, or is cancelled.
+- Active expeditions may be cancelled. Cancellation reveals no tiles and does not refund spent materials in the first playable version.
+- Territory reveal is the only required expedition reward for the first implementation. No additional loot is awarded.
+- Ruins, artifacts, beacon precursors, special-site rewards, and their access rules remain deferred.
+
 ### **LOCKED: State-Keyed Event Engine**
 
 Events fire probabilistically, weighted by current plot state. Event tables and exact weights are deferred to development within the design constraints below.
@@ -210,7 +277,7 @@ Allowed unlock categories:
 | -------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | **Beacon pacing**                      | High — too easy = no meta motivation; too slow = disengagement  | 5–8 cycle target is LOCKED; validate via simulation pre-ship.                                                     |
 | **Endless mode design**                | High — escalation must be qualitatively new, not larger numbers | New event types, new state combos, new collapse conditions required. Otherwise endless dies after one beacon run. |
-| **Sector reveal pacing**               | Medium — sector transitions must feel like milestones           | Iterative testing of 2×2 / 4×2 / 6×6 cadence against cycle budget.                                                |
+| **Sector reveal pacing**               | Medium — sector transitions must feel like milestones           | Iterative testing of 2×2 / 4×4 / 6×6 cadence against cycle budget.                                                |
 | **Meta-progression bloat**             | Medium — risk of choice overload                                | Strict choice-only policy; curatorial gate on unlock count per run.                                               |
 | **Isometric scope**                    | Medium — doubles art surface vs. flat top-down                  | Lock art budget before building-detail design. Defer detailed art to development.                                 |
 | **Event-weight fairness**              | Medium — 5–10% run-ending events must not feel arbitrary        | State-weighted engine; pre-ship statistical simulation.                                                           |
@@ -225,7 +292,7 @@ The following items are explicitly **OUT OF SCOPE** for design. Development owns
 1. **Concrete event tables with state weights** — design defines the engine and ratios; dev fills the tables.
 2. **Beacon research tree (specific nodes + thresholds)** — design defines the 5–8 cycle target; dev authors nodes.
 3. **Meta-progression unlock catalog** — design defines the choice-only policy and banned categories; dev curates the unlock set.
-4. **Tile / sector reveal cost schedule** — design defines sector sizes by stage; dev tunes exact material/research costs.
+4. **Post-first-playable expedition cost tuning** — the first playable uses the locked materials costs above; later tuning or splitting costs into more specific resources requires an explicit balance or design update.
 5. **Economy faucets / drains simulation** — design requires the sim pre-ship; dev runs it.
 6. **UI / UX asset pipeline** — design defines layout and chrome philosophy; dev owns assets and interaction polish.
 7. **Save / load architecture** — design defines state-reset semantics on beacon; dev owns the technical structure.
@@ -261,7 +328,7 @@ These simulation gates MUST close before ship:
 
 **Lead Designer:** wale (game designer mind)
 **For:** ayeola05@gmail.com
-**Document:** v3 LOCKED, v3.1 amendments applied; supersedes v2 (artifact 491A4D3E-F36B-1410-8465-00039CE7DF11)
+**Document:** v3 LOCKED, v3.2 amendments applied; supersedes v2 (artifact 491A4D3E-F36B-1410-8465-00039CE7DF11)
 **Next action:** development handoff.
 
 _This document is the single source of truth for the v1 build. Proceed to development._

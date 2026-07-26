@@ -1,0 +1,1 @@
+export const DEFAULT_INITIAL_MATERIALS = 200;

@@ -1,0 +1,1 @@
+export const WORKER_RECRUITMENT_FOOD_COST = 10;
