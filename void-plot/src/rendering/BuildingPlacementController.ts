@@ -9,6 +9,7 @@ import type {
 import type { TileCoordinate } from "../world";
 import type { BuildingPlacementPreview } from "./BuildingPlacementPreview";
 import type { WorldTileInteractionController } from "./WorldTileInteractionController";
+import { POINTER_TAP_MAX_DISTANCE } from "./WorldCameraController";
 
 export type BuildingPlacementFeedbackStatus =
   | "inactive"
@@ -39,9 +40,9 @@ export class BuildingPlacementController {
     private readonly preview: BuildingPlacementPreview,
     private readonly source: BuildingPlacementControllerSource,
   ) {
-    scene.input.on("pointerdown", this.handlePointerDown, this);
+    scene.input.on("pointerup", this.handlePointerUp, this);
     scene.events.once("shutdown", () => {
-      scene.input.off("pointerdown", this.handlePointerDown, this);
+      scene.input.off("pointerup", this.handlePointerUp, this);
     });
   }
 
@@ -110,8 +111,12 @@ export class BuildingPlacementController {
     return this.feedbackStatus;
   }
 
-  private handlePointerDown(pointer: Input.Pointer): void {
-    if (pointer.button !== 0 || this.selectedType === undefined) {
+  private handlePointerUp(pointer: Input.Pointer): void {
+    if (
+      pointer.button !== 0 ||
+      pointer.getDistance() > POINTER_TAP_MAX_DISTANCE ||
+      this.selectedType === undefined
+    ) {
       return;
     }
 

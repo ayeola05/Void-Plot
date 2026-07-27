@@ -29,6 +29,9 @@ const config: Types.Core.GameConfig = {
     mode: Scale.RESIZE,
     autoCenter: Scale.CENTER_BOTH,
   },
+  input: {
+    activePointers: 2,
+  },
   scene: [BootScene, MainMenuScene, AboutScene, MainGame, PauseScene, SettingsScene, VictoryScene, ResultsScene, GameOverScene],
 };
 

@@ -101,6 +101,8 @@ import {
   NotificationStack,
   type NotificationPriority,
   OnboardingPanel,
+  MobileGameplayNavigation,
+  type MobileGameplayPanel,
   type ConstructionCardViewModel,
 } from "../ui";
 import { createWorld, type TileCoordinate, type WorldState } from "../world";
@@ -157,6 +159,8 @@ export class Game extends Scene {
   private beaconPanel!: BeaconPanel;
   private notificationStack!: NotificationStack;
   private onboardingPanel!: OnboardingPanel;
+  private mobileGameplayNavigation!: MobileGameplayNavigation;
+  private mobileLayoutActive = false;
   private soundEvents!: SoundEventBus;
   private statistics: RunStatistics = createRunStatistics();
   private simulationFrozen = false;
@@ -329,6 +333,11 @@ export class Game extends Scene {
         getMaterialRecoveryWarning: (cost) => this.getMaterialRecoveryWarning(cost),
       },
     );
+    this.mobileGameplayNavigation = new MobileGameplayNavigation(this, {
+      selectPanel: (panel) => this.showMobileGameplayPanel(panel),
+      zoomIn: () => this.worldCameraController.zoomIn(),
+      zoomOut: () => this.worldCameraController.zoomOut(),
+    });
     this.researchPanel = new ResearchPanel(this, {
       getResearchState: () => this.researchState,
       selectTechnology: (id) => this.requestSelectTechnology(id),
@@ -960,6 +969,7 @@ export class Game extends Scene {
 
   private applyResponsiveLayout(width: number, height: number): void {
     const layout = calculateResponsiveGameLayout(width, height, this.accessibility.uiScale);
+    this.mobileLayoutActive = layout.mobile;
 
     this.worldCameraController.setViewport(layout.gameplay);
     this.selectedTilePanel.setLayout({
@@ -974,10 +984,37 @@ export class Game extends Scene {
     this.resourcePanel.setLayout(layout.resourcesPanel);
     this.expeditionPlanningPanel.setLayout(layout.expeditionPanel);
     this.buildPanel.setLayout(layout.buildPanel);
+    this.mobileGameplayNavigation.setLayout(
+      layout.mobileNavigation,
+      layout.mobile,
+    );
+    this.showMobileGameplayPanel(
+      this.mobileGameplayNavigation.getActivePanel(),
+    );
     this.eventDilemmaModal.setLayout(layout.uiViewportWidth, layout.uiViewportHeight);
-    this.researchPanel.setLayout(layout.uiViewportWidth, layout.uiViewportHeight);
+    this.researchPanel.setLayout(
+      layout.uiViewportWidth,
+      layout.mobile
+        ? layout.gameplay.height / this.accessibility.uiScale
+        : layout.uiViewportHeight,
+    );
     this.beaconPanel.setLayout(layout.uiViewportWidth);
-    this.onboardingPanel.setLayout(layout.uiViewportWidth, layout.uiViewportHeight, layout.uiReservedWidth);
+    this.onboardingPanel.setLayout(
+      layout.uiViewportWidth,
+      layout.mobile
+        ? layout.gameplay.height / this.accessibility.uiScale
+        : layout.uiViewportHeight,
+      layout.uiReservedWidth,
+    );
+  }
+
+  private showMobileGameplayPanel(panel: MobileGameplayPanel): void {
+    this.resourcePanel.setVisible(!this.mobileLayoutActive || panel === "resources");
+    this.buildPanel.setVisible(!this.mobileLayoutActive || panel === "build");
+    this.selectedTilePanel.setVisible(!this.mobileLayoutActive || panel === "tile");
+    this.expeditionPlanningPanel.setVisible(
+      !this.mobileLayoutActive || panel === "expedition",
+    );
   }
 
   private advanceDynamicEvents(elapsedMilliseconds: number): void {

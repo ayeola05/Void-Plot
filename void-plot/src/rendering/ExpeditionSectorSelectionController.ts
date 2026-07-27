@@ -9,6 +9,7 @@ import {
 } from "../world";
 import type { ExpeditionSectorPreview } from "./ExpeditionSectorPreview";
 import type { WorldTileInteractionController } from "./WorldTileInteractionController";
+import { POINTER_TAP_MAX_DISTANCE } from "./WorldCameraController";
 
 export type SelectedExpeditionSector = Extract<
   ExpeditionSectorSelectionResult,
@@ -36,12 +37,12 @@ export class ExpeditionSectorSelectionController {
     this.sizeKeys[1]?.on("down", this.selectFour, this);
     this.sizeKeys[2]?.on("down", this.selectSix, this);
 
-    scene.input.on("pointerdown", this.handlePointerDown, this);
+    scene.input.on("pointerup", this.handlePointerUp, this);
     scene.events.once("shutdown", () => {
       this.sizeKeys[0]?.off("down", this.selectTwo, this);
       this.sizeKeys[1]?.off("down", this.selectFour, this);
       this.sizeKeys[2]?.off("down", this.selectSix, this);
-      scene.input.off("pointerdown", this.handlePointerDown, this);
+      scene.input.off("pointerup", this.handlePointerUp, this);
     });
     this.update();
   }
@@ -76,6 +77,10 @@ export class ExpeditionSectorSelectionController {
     return this.selectedSize;
   }
 
+  public selectSectorSize(size: ExpeditionSectorSize): void {
+    this.setSectorSize(size);
+  }
+
   public getSelectedSector(): SelectedExpeditionSector | undefined {
     if (this.selectedSector === undefined) {
       return undefined;
@@ -108,8 +113,12 @@ export class ExpeditionSectorSelectionController {
   private selectFour(): void { this.setSectorSize(4); }
   private selectSix(): void { this.setSectorSize(6); }
 
-  private handlePointerDown(pointer: Input.Pointer): void {
-    if (!this.enabled || pointer.button !== 0) {
+  private handlePointerUp(pointer: Input.Pointer): void {
+    if (
+      !this.enabled ||
+      pointer.button !== 0 ||
+      pointer.getDistance() > POINTER_TAP_MAX_DISTANCE
+    ) {
       return;
     }
 

@@ -64,7 +64,7 @@ const hasBuilding = (source: OnboardingSource, type: "homes" | "farm" | "forest"
   );
 
 export const ONBOARDING_OBJECTIVES: readonly Objective[] = Object.freeze([
-  { title: "Survey the Acre", instruction: "Select any revealed tile to inspect it.", hint: "Left-click a lighter tile", isComplete: (s) => s.getSelectedTile() !== undefined },
+  { title: "Survey the Acre", instruction: "Select any revealed tile to inspect it.", hint: "Click or tap a lighter tile", isComplete: (s) => s.getSelectedTile() !== undefined },
   { title: "Make Room", instruction: "Build one Home to increase population capacity.", hint: "Build panel → Homes → revealed vacant tile", isComplete: (s) => hasBuilding(s, "homes") },
   { title: "Prepare Food", instruction: "Build one Farm; it will need a worker and Power before producing.", hint: "Build panel → Farm", isComplete: (s) => hasBuilding(s, "farm") },
   { title: "Bring Power Online", instruction: "Build a Power Plant and assign a worker to it.", hint: "Select the plant after building it → Assign Worker", isComplete: (s) => hasBuilding(s, "powerPlant", true) },
@@ -72,7 +72,7 @@ export const ONBOARDING_OBJECTIVES: readonly Objective[] = Object.freeze([
   { title: "First Harvest", instruction: "Keep the staffed, powered Farm running until it produces Food.", hint: "Farm progress appears in Selected Tile", isComplete: (s) => s.getStatistics().foodProduced > 0 },
   { title: "Renewable Materials", instruction: "Build and staff a Forest to establish renewable Materials.", hint: "Build panel → Forest → Assign Worker", isComplete: (s) => hasBuilding(s, "forest", true) },
   { title: "First Timber", instruction: "Keep the staffed, powered Forest running until it produces Materials.", hint: "Forest progress appears in Selected Tile", isComplete: (s) => s.getStatistics().materialsProduced > 0 },
-  { title: "Push the Frontier", instruction: "Select a valid frontier sector and start an expedition.", hint: "Press 2, 4, or 6 → click green sector → Start Expedition", isComplete: (s) => s.getExpeditionState().expeditions.length > 0 },
+  { title: "Push the Frontier", instruction: "Select a valid frontier sector and start an expedition.", hint: "Explore → choose a size → tap green sector → Start Expedition", isComplete: (s) => s.getExpeditionState().expeditions.length > 0 },
   { title: "Build a Lab", instruction: "Build and staff a powered Lab.", hint: "Build panel → Lab → Assign Worker", isComplete: (s) => hasBuilding(s, "lab", true) },
   { title: "Choose Research", instruction: "Select an available technology and begin research.", hint: "Research panel → available Tier 1 technology", isComplete: (s) => s.getResearchState().activeTechnology !== undefined || s.getResearchState().completedTechnologies.length > 0 },
   { title: "The Genesis Beacon", instruction: "Reach Final Transmission and satisfy every Beacon requirement to win the run.", hint: "Track Population, Food, Materials, Power, and Tier 4 Research in the Beacon panel", isComplete: () => false },
@@ -101,7 +101,9 @@ export class OnboardingPanel {
   public setLayout(viewportWidth: number, viewportHeight: number, reservedUiWidth: number): void {
     const width = Math.min(310, Math.max(280, viewportWidth - reservedUiWidth - 24));
     const x = reservedUiWidth + 12;
-    const y = Math.max(12, viewportHeight - 106);
+    const y = reservedUiWidth === 0
+      ? Math.min(104, Math.max(12, viewportHeight - 106))
+      : Math.max(12, viewportHeight - 106);
     this.container.setPosition(x, y);
     this.background.setSize(width, 94);
     this.instruction.setWordWrapWidth(width - 130);

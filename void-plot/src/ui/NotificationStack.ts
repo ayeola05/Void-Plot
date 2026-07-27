@@ -37,7 +37,9 @@ export class NotificationStack {
     let visibleIndex = 0;
     for (const slot of this.slots) {
       if (!slot.active) continue;
-      const x = Math.min(uiWidth - 14, RESERVED_UI_WIDTH + 294);
+      const x = uiWidth < 760
+        ? uiWidth - 14
+        : Math.min(uiWidth - 14, RESERVED_UI_WIDTH + 294);
       const y = 14 + visibleIndex * 36;
       slot.background.setPosition(x, y);
       slot.text.setPosition(x - 10, y + 8);

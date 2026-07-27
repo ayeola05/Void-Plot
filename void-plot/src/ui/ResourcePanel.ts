@@ -296,6 +296,10 @@ export class ResourcePanel {
     this.modifierText.setWordWrapWidth(contentWidth);
   }
 
+  public setVisible(visible: boolean): void {
+    this.container.setVisible(visible);
+  }
+
   public setAccessibility(reducedMotion: boolean, colorblindResourceColors: boolean): void {
     this.reducedMotion = reducedMotion;
     const palette = colorblindResourceColors

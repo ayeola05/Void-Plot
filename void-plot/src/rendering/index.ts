@@ -3,8 +3,13 @@ export {
   WORLD_CAMERA_MIN_ZOOM,
   WORLD_CAMERA_MOVEMENT_SPEED,
   WORLD_CAMERA_START_ZOOM,
+  WORLD_CAMERA_MOBILE_START_ZOOM,
   WORLD_CAMERA_ZOOM_STEP,
+  POINTER_TAP_MAX_DISTANCE,
+  INITIAL_FRAMING_PADDING,
+  INITIAL_REVEALED_AREA_TILES,
   WorldCameraController,
+  calculateInitialWorldZoom,
   validateInitialCameraFraming,
 } from "./WorldCameraController";
 export type { WorldCameraConfig } from "./WorldCameraController";
@@ -13,6 +18,10 @@ export type { WorldRenderBounds } from "./WorldRenderer";
 export {
   BUILD_PANEL_HEIGHT,
   BUILD_PANEL_COMPACT_HEIGHT,
+  MOBILE_LAYOUT_BREAKPOINT,
+  MOBILE_MIN_GAMEPLAY_HEIGHT,
+  MOBILE_NAVIGATION_HEIGHT,
+  MOBILE_SHORT_VIEWPORT_HEIGHT,
   LAYOUT_GUTTER,
   MIN_GAMEPLAY_VIEWPORT_WIDTH,
   PANEL_MAX_WIDTH,

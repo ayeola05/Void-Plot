@@ -379,6 +379,10 @@ export class SelectedTilePanel {
     this.updateWorkerButton();
   }
 
+  public setVisible(visible: boolean): void {
+    this.container.setVisible(visible);
+  }
+
   public refresh(): void {
     this.setSelection(this.selectedCoordinate);
     this.updateWorkerButton();

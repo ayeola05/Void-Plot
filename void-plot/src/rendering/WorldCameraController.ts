@@ -3,6 +3,8 @@ import type { Cameras, GameObjects, Scene } from "phaser";
 
 import type { WorldRenderBounds } from "./WorldRenderer";
 import {
+  MOBILE_LAYOUT_BREAKPOINT,
+  MOBILE_SHORT_VIEWPORT_HEIGHT,
   screenPointIsInsideRectangle,
   type ScreenRectangle,
 } from "./ResponsiveGameLayout";
@@ -12,6 +14,36 @@ export const WORLD_CAMERA_MAX_ZOOM = 2;
 export const WORLD_CAMERA_ZOOM_STEP = 0.25;
 export const WORLD_CAMERA_MOVEMENT_SPEED = 320;
 export const WORLD_CAMERA_START_ZOOM = 2;
+export const WORLD_CAMERA_MOBILE_START_ZOOM = 1.5;
+export const POINTER_TAP_MAX_DISTANCE = 10;
+export const INITIAL_REVEALED_AREA_TILES = 8;
+export const INITIAL_FRAMING_PADDING = 24;
+
+export function calculateInitialWorldZoom(
+  viewport: ScreenRectangle,
+  tileSize: number,
+  minZoom = WORLD_CAMERA_MIN_ZOOM,
+  maxZoom = WORLD_CAMERA_MAX_ZOOM,
+): number {
+  const revealedAreaSize = INITIAL_REVEALED_AREA_TILES * tileSize;
+  if (revealedAreaSize <= 0) return minZoom;
+  const availableWidth = Math.max(1, viewport.width - INITIAL_FRAMING_PADDING);
+  const availableHeight = Math.max(1, viewport.height - INITIAL_FRAMING_PADDING);
+  const preferredZoom =
+    viewport.width < MOBILE_LAYOUT_BREAKPOINT ||
+    viewport.height < MOBILE_SHORT_VIEWPORT_HEIGHT
+      ? WORLD_CAMERA_MOBILE_START_ZOOM
+      : WORLD_CAMERA_START_ZOOM;
+  return PhaserMath.Clamp(
+    Math.min(
+      preferredZoom,
+      availableWidth / revealedAreaSize,
+      availableHeight / revealedAreaSize,
+    ),
+    minZoom,
+    maxZoom,
+  );
+}
 
 export interface WorldCameraConfig {
   minZoom: number;
@@ -25,6 +57,12 @@ export function validateInitialCameraFraming(): { readonly valid: boolean; reado
   const initialRevealedAreaPixels = 8 * 20 * WORLD_CAMERA_START_ZOOM;
   if (WORLD_CAMERA_START_ZOOM < WORLD_CAMERA_MIN_ZOOM || WORLD_CAMERA_START_ZOOM > WORLD_CAMERA_MAX_ZOOM) errors.push("Initial zoom must remain within camera limits.");
   if (initialRevealedAreaPixels < 220 || initialRevealedAreaPixels > 340) errors.push("Initial framing must keep the 8×8 starting area readable without excessive empty grid.");
+  const portraitViewport = { x: 0, y: 0, width: 390, height: 523 };
+  const landscapeViewport = { x: 0, y: 0, width: 844, height: 150 };
+  const portraitZoom = calculateInitialWorldZoom(portraitViewport, 20);
+  const landscapeZoom = calculateInitialWorldZoom(landscapeViewport, 20);
+  if (portraitZoom !== WORLD_CAMERA_MOBILE_START_ZOOM) errors.push("Portrait framing should use the reduced mobile starting zoom when the revealed area fits.");
+  if (INITIAL_REVEALED_AREA_TILES * 20 * landscapeZoom > landscapeViewport.height) errors.push("Landscape framing must fit the initial revealed area inside the short gameplay viewport.");
   return Object.freeze({ valid: errors.length === 0, errors: Object.freeze(errors) });
 }
 
@@ -44,6 +82,9 @@ export class WorldCameraController {
   private velocityY = 0;
   private reducedMotion = false;
   private readonly zoomProxy = { zoom: 1 };
+  private dragPointerId?: number;
+  private dragLastX = 0;
+  private dragLastY = 0;
 
   public constructor(
     private readonly scene: Scene,
@@ -91,8 +132,14 @@ export class WorldCameraController {
     this.clampToWorldBounds();
 
     scene.input.on("wheel", this.handleWheel, this);
+    scene.input.on("pointerdown", this.handlePointerDown, this);
+    scene.input.on("pointermove", this.handlePointerMove, this);
+    scene.input.on("pointerup", this.handlePointerUp, this);
     scene.events.once("shutdown", () => {
       scene.input.off("wheel", this.handleWheel, this);
+      scene.input.off("pointerdown", this.handlePointerDown, this);
+      scene.input.off("pointermove", this.handlePointerMove, this);
+      scene.input.off("pointerup", this.handlePointerUp, this);
       scene.tweens.killTweensOf(this.zoomProxy);
     });
   }
@@ -124,6 +171,7 @@ export class WorldCameraController {
   public setReducedMotion(reduced: boolean): void { this.reducedMotion = reduced; }
 
   public setViewport(viewport: ScreenRectangle): void {
+    const initialLayout = this.viewport === undefined;
     const previousViewport = this.viewport ?? this.getViewport();
     const previousCentreX =
       this.camera.scrollX + previousViewport.width / (2 * this.camera.zoom);
@@ -137,8 +185,31 @@ export class WorldCameraController {
       viewport.height,
     );
     this.viewport = { ...viewport };
-    this.camera.centerOn(previousCentreX, previousCentreY);
+    if (initialLayout) {
+      this.camera.setZoom(
+        calculateInitialWorldZoom(
+          viewport,
+          this.worldBounds.tileSize,
+          this.config.minZoom,
+          this.config.maxZoom,
+        ),
+      );
+      this.camera.centerOn(
+        this.worldBounds.x + this.worldBounds.width / 2,
+        this.worldBounds.y + this.worldBounds.height / 2,
+      );
+    } else {
+      this.camera.centerOn(previousCentreX, previousCentreY);
+    }
     this.clampToWorldBounds();
+  }
+
+  public zoomIn(): void {
+    this.zoomAtViewportCentre(this.config.zoomStep);
+  }
+
+  public zoomOut(): void {
+    this.zoomAtViewportCentre(-this.config.zoomStep);
   }
 
   private handleWheel(
@@ -182,6 +253,50 @@ export class WorldCameraController {
       ease: "Sine.Out",
       onUpdate: () => this.applyFocusedZoom(this.zoomProxy.zoom, focusedWorldX, focusedWorldY, localPointerX, localPointerY),
     });
+  }
+
+  private handlePointerDown(pointer: Input.Pointer): void {
+    if (
+      pointer.button !== 0 ||
+      !screenPointIsInsideRectangle(this.getViewport(), pointer.x, pointer.y)
+    ) {
+      return;
+    }
+    this.dragPointerId = pointer.id;
+    this.dragLastX = pointer.x;
+    this.dragLastY = pointer.y;
+  }
+
+  private handlePointerMove(pointer: Input.Pointer): void {
+    if (this.dragPointerId !== pointer.id || !pointer.isDown) return;
+    const deltaX = pointer.x - this.dragLastX;
+    const deltaY = pointer.y - this.dragLastY;
+    this.dragLastX = pointer.x;
+    this.dragLastY = pointer.y;
+    if (pointer.getDistance() <= POINTER_TAP_MAX_DISTANCE) return;
+    this.velocityX = 0;
+    this.velocityY = 0;
+    this.camera.scrollX -= deltaX / this.camera.zoom;
+    this.camera.scrollY -= deltaY / this.camera.zoom;
+    this.clampToWorldBounds();
+  }
+
+  private handlePointerUp(pointer: Input.Pointer): void {
+    if (this.dragPointerId === pointer.id) this.dragPointerId = undefined;
+  }
+
+  private zoomAtViewportCentre(step: number): void {
+    const viewport = this.getViewport();
+    const localX = viewport.width / 2;
+    const localY = viewport.height / 2;
+    const worldX = this.camera.scrollX + localX / this.camera.zoom;
+    const worldY = this.camera.scrollY + localY / this.camera.zoom;
+    const zoom = PhaserMath.Clamp(
+      this.camera.zoom + step,
+      this.config.minZoom,
+      this.config.maxZoom,
+    );
+    this.applyFocusedZoom(zoom, worldX, worldY, localX, localY);
   }
 
   private applyFocusedZoom(zoom: number, worldX: number, worldY: number, localX: number, localY: number): void {

@@ -8,6 +8,7 @@ import {
 } from "../world";
 import type { WorldRenderBounds, WorldRenderer } from "./WorldRenderer";
 import { screenPointIsInsideRectangle } from "./ResponsiveGameLayout";
+import { POINTER_TAP_MAX_DISTANCE } from "./WorldCameraController";
 
 export type TileHitResult =
   | {
@@ -91,8 +92,8 @@ export class WorldTileInteractionController {
     private readonly worldBounds: WorldRenderBounds,
   ) {
     this.camera = scene.cameras.main;
-    scene.input.on("pointerdown", this.handlePointerDown, this);
-    scene.events.once("shutdown", () => scene.input.off("pointerdown", this.handlePointerDown, this));
+    scene.input.on("pointerup", this.handlePointerUp, this);
+    scene.events.once("shutdown", () => scene.input.off("pointerup", this.handlePointerUp, this));
     this.updateHover(scene.input.activePointer);
   }
 
@@ -108,8 +109,8 @@ export class WorldTileInteractionController {
     return this.state.getSelectedTile();
   }
 
-  private handlePointerDown(pointer: Input.Pointer): void {
-    if (pointer.button !== 0) {
+  private handlePointerUp(pointer: Input.Pointer): void {
+    if (pointer.button !== 0 || pointer.getDistance() > POINTER_TAP_MAX_DISTANCE) {
       return;
     }
 

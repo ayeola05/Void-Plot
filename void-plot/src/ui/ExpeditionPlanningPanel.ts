@@ -21,6 +21,7 @@ import {
 import {
   validateExpeditionSectorSelection,
   type ExpeditionSectorSelectionResult,
+  type ExpeditionSectorSize,
   type WorldState,
 } from "../world";
 import { ThemedButton } from "./ThemedButton";
@@ -32,6 +33,8 @@ export type ValidSelectedExpeditionSector = Extract<
 
 export interface ExpeditionSectorSelectionSource {
   getSelectedSector(): ValidSelectedExpeditionSector | undefined;
+  getSelectedSize(): ExpeditionSectorSize;
+  selectSectorSize(size: ExpeditionSectorSize): void;
 }
 
 export interface ExpeditionPlanningGameplaySource {
@@ -115,7 +118,7 @@ export function formatLaunchDisabledReason(
   }
 
   if (availability.status === "no-sector-selected") {
-    return "Select a frontier sector: hover a hidden edge, press 2, 4, or 6, then click green.";
+    return "Select a frontier sector: choose 2×2, 4×4, or 6×6, then tap a green preview.";
   }
 
   if (availability.status === "planning-blocked") {
@@ -174,7 +177,7 @@ function formatSelectedSectorDetails(
   selection?: ExpeditionSectorSelectionResult,
 ): readonly string[] {
   if (selection === undefined) {
-    return ["No sector selected", "Hover • press 2, 4, or 6 • click a valid sector"];
+    return ["No sector selected", "Choose a size • tap a valid green sector"];
   }
 
   if (selection.status === "out-of-bounds") {
@@ -201,6 +204,7 @@ export class ExpeditionPlanningPanel {
   private readonly progressFill: GameObjects.Rectangle;
   private readonly progressTrack: GameObjects.Rectangle;
   private readonly startButton: ThemedButton;
+  private readonly sizeButtons: readonly ThemedButton[];
   private completionMessage = "";
   private completionMessageExpiresAt = 0;
   private layoutWidth = 1;
@@ -259,7 +263,16 @@ export class ExpeditionPlanningPanel {
       .setOrigin(0.5, 0);
     this.startButton = new ThemedButton(scene, "Start Expedition", () => {
       this.gameplaySource.requestStartExpedition();
-    });
+    }).setStopsPointerPropagation();
+    this.sizeButtons = ([2, 4, 6] as const).map((size) =>
+      new ThemedButton(scene, `${size}×${size}`, () => {
+        this.selectionSource.selectSectorSize(size);
+        this.renderedKey = "";
+        this.renderCurrentState();
+      })
+        .setStopsPointerPropagation()
+        .setTooltip(`Preview a ${size}×${size} expedition sector.`),
+    );
     this.container = scene.add
       .container(0, 0, [
         this.background,
@@ -271,6 +284,7 @@ export class ExpeditionPlanningPanel {
         this.completionText,
         this.disabledReasonText,
         this.startButton.container,
+        ...this.sizeButtons.map((button) => button.container),
       ])
       .setDepth(RENDER_DEPTHS.ui)
       .setScrollFactor(0);
@@ -303,7 +317,16 @@ export class ExpeditionPlanningPanel {
       contentWidth,
       THEME_SPACING.buttonHeight,
     );
+    const sizeButtonWidth = Math.min(48, Math.max(36, (layout.width - 112) / 3));
+    const sizeButtonStart = layout.width - padding - sizeButtonWidth * 3 - 4;
+    this.sizeButtons.forEach((button, index) => {
+      button.setLayout(sizeButtonStart + index * sizeButtonWidth, 4, sizeButtonWidth - 3, 22);
+    });
     this.renderCurrentState();
+  }
+
+  public setVisible(visible: boolean): void {
+    this.container.setVisible(visible);
   }
 
   public update(): boolean {
@@ -369,6 +392,10 @@ export class ExpeditionPlanningPanel {
     }
 
     this.renderedKey = key;
+    const selectedSize = this.selectionSource.getSelectedSize();
+    this.sizeButtons.forEach((button, index) => {
+      button.setSelected(([2, 4, 6] as const)[index] === selectedSize);
+    });
     this.background.setSize(this.layoutWidth, compact ? 58 : this.layoutHeight);
     this.detailsText.setText(details);
     this.activeText.setText(activeText).setVisible(!compact);

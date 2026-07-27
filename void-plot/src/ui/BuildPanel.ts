@@ -106,6 +106,10 @@ export class BuildPanel {
     this.cancelButton.setLayout(action.x + Math.floor(action.width * 0.48), action.y + 2, Math.ceil(action.width * 0.52) - 2, Math.max(1, action.height - 4));
   }
 
+  public setVisible(visible: boolean): void {
+    this.container.setVisible(visible);
+  }
+
   public setTutorialTarget(type?: BuildingType): void {
     BUILDING_TYPES.forEach((candidate) => this.cards[candidate].setAttention(candidate === type));
   }

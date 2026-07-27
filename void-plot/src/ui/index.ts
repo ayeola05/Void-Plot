@@ -62,6 +62,11 @@ export type {
   RecruitmentPanelViewModel,
 } from "./recruitmentViewModel";
 export { ThemedButton } from "./ThemedButton";
+export { MobileGameplayNavigation } from "./MobileGameplayNavigation";
+export type {
+  MobileGameplayNavigationSource,
+  MobileGameplayPanel,
+} from "./MobileGameplayNavigation";
 export {
   EventDilemmaModal,
   formatEventChoiceUnavailable,
